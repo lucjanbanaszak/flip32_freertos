@@ -39,6 +39,10 @@ float pitchGYR = 0.0f;
 float pitch = 0.0f;
 float roll = 0.0f;
 
+// these must be defined somewhere else
+extern float samplePeriod = 0.01f;
+extern float quaternion[4] = {1.0f, 0.0f, 0.0f, 0.0f };;
+
 void computeIMU(void)
 {
     Gyro_getADC();

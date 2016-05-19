@@ -41,6 +41,8 @@ int16_t magData[3];
 int16_t accZero[3];
 int16_t gyroZero[3];
 
+#define LOOP_PERIOD	10
+
 HAL_StatusTypeDef sensorsAutodetect(void)
 {
 	if( mpuDetect( &acc, &gyro ) != HAL_OK ) return HAL_ERROR;
@@ -59,111 +61,33 @@ HAL_StatusTypeDef sensorsAutodetect(void)
 	return HAL_OK;
 }
 
-#define Kp	8000.0f
-#define Ki	100.0f
-#define Kd	10000.00f
-
-extern TIM_HandleTypeDef Timer1Handle;
-extern TIM_HandleTypeDef Timer4Handle;
-
-extern __IO int32_t pwmi1_val;
-extern __IO int32_t pwmi2_val;
-extern __IO int32_t pwmi3_val;
-extern __IO int32_t pwmi4_val;
-
-extern int16_t angle[2];
-extern float anglerad[2];
-
-#define LOOP_FREQ	10
-
 void mpu_update_task(void const * argument)
 {
-//	bool Output_enable = true;
-	const TickType_t xFrequency = LOOP_FREQ;
+	const TickType_t xPeriod = LOOP_PERIOD;
 	TickType_t xLastWakeTime = xTaskGetTickCount();
-
-//	float Error = 0;
-//	float _Error = 0;
-//	float ITerm = 0;
-//	float DTerm = 0;
 
 	for(;;)
 	{
 	  xSemaphoreTake( MPU_DataReady_sem, portMAX_DELAY );
-	  vTaskDelayUntil( &xLastWakeTime, xFrequency );
+	  vTaskDelayUntil( &xLastWakeTime, xPeriod );
 
 	  LEDToggle( PIN_LED0 );
+
 	  PIN_Set( PIN_PWMI7 );
-
 	  computeIMU();
-
-//	  printf("\n\r%d.%d.%d_%d.%d.%d_%d.%d", gyroADC[0], gyroADC[1], gyroADC[2], accADC[0], accADC[1], accADC[2], angle[ROLL], angle[PITCH] );
-
-//	  Error = anglerad[PITCH];
-//
-//	  if( (Error > 0.5f) || (Error < -0.5f) ) Output_enable = false;
-//
-////	  if( ITerm >  10.f ) ITerm = 10000.0f;
-////	  if( ITerm < -10000.f ) ITerm = -10000.0f;
-//
-//	  ITerm = ITerm + Error;
-//
-//	  float Output = Kp*Error + Ki*ITerm + Kd*(Error -_Error);
-//
-//
-//	  _Error =  Error;
-//
-//	  int32_t OutputL = (int32_t)Output/* + (pwmi1_val-1500)/5*/;
-//	  int32_t OutputR = (int32_t)Output/* - (pwmi1_val-1500)/5*/;
-//
-//	  if( OutputL >  800 ) OutputL = 800;
-//	  if( OutputL < -800 ) OutputL = -800;
-//
-//	  if( OutputR >  800 ) OutputR = 800;
-//	  if( OutputR < -800 ) OutputR = -800;
-//
-//	  if( Output_enable ){
-//		  if( OutputL > 0 )
-//		  {
-//			  PIN_Clear( PIN_PWMO5 );
-//			  Timer4Handle.Instance->CCR4 = OutputL;
-//		  }else
-//		  {
-//			  PIN_Set( PIN_PWMO5 );
-//			  Timer4Handle.Instance->CCR4 = OutputL+1000;
-//		  };
-//
-//		  if( OutputR > 0 )
-//		  {
-//			  PIN_Clear( PIN_PWMO3 );
-//			  Timer4Handle.Instance->CCR2 = OutputR;
-//
-//		  }else
-//		  {
-//			  PIN_Set( PIN_PWMO3 );
-//			  Timer4Handle.Instance->CCR2 = OutputR+1000;
-//
-//		  };
-//	  }else{
-//		  PIN_Clear( PIN_PWMO5 );
-//		  PIN_Clear( PIN_PWMO3 );
-//		  Timer4Handle.Instance->CCR2 = 0;
-//		  Timer4Handle.Instance->CCR4 = 0;
-//	  }
-
 	  PIN_Clear( PIN_PWMI7 );
 	};
 };
 
 void mag_update_task(void const * argument)
 {
-	const TickType_t xFrequency = 100;
+	const TickType_t xPeriod = 100;
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
 	for(;;)
 	{
 	  xSemaphoreTake( MAG_DataReady_sem, portMAX_DELAY );
-	  vTaskDelayUntil( &xLastWakeTime, xFrequency );
+	  vTaskDelayUntil( &xLastWakeTime, xPeriod );
 
 	  mag.read( magData );
 	};
@@ -193,14 +117,14 @@ void Baro_Common(void)
 
 void baro_update_task(void const * argument)
 {
-	const TickType_t xFrequency = 20;
+	const TickType_t xPeriod = 100;
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
 	uint8_t state = 0;
 
 	for(;;)
 	{
-	  vTaskDelayUntil( &xLastWakeTime, xFrequency );
+	  vTaskDelayUntil( &xLastWakeTime, xPeriod );
 
 	  switch( state ){
 	  	  case 0:

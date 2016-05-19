@@ -245,6 +245,6 @@ typedef struct {
 
 HAL_StatusTypeDef mspInit( UART_HandleTypeDef *huart );
 HAL_StatusTypeDef processOutCommand(uint8_t cmdMSP);
-void MSP_RXCallback( uint8_t c );
+void MSP_RXCallback( uint8_t, portBASE_TYPE* );
 
 #endif /* DRV_MSP_H_ */

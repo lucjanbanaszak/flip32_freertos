@@ -33,41 +33,9 @@ void imuQuaternionToGravity(float q[4], float g[3])
     g[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 }
 
-#if 0
-// Converts quaternion to Y/P/R angles
-// result in radians
-// alternate - not verified
-void imuQuaternionToYawPitchRoll2(float q[4], float ypr[3])
-{
-	  // gravity vector (not aerospace sequence)
-    float gx, gy, gz;
-
-    gx = 2 * (q[1]*q[3] - q[0]*q[2]);
-    gy = 2 * (q[0]*q[1] + q[2]*q[3]);
-    gz = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
-	
-    // yaw
-    ypr[0] = atan2f(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1);
-	  // roll
-    ypr[1] = atanf(gx / sqrt(gy*gy + gz*gz));
-	  // pitch
-    ypr[2] = atanf(gy / sqrt(gx*gx + gz*gz));
-}
-#endif
-
 // quaternion to YPR in aerospace sequence
 void imuQuaternionToYawPitchRoll(float q[4], float ypr[3]) 
 {
-#ifdef WRONG
-    // yaw
-    ypr[0] = atan2f(2*(q[0]*q[3]+q[1]*q[2]), 1-2*(q[2]*q[2]+q[3]*q[3]));
-    // pitch
-    ypr[1] = asinf(2*(q[0]*q[2]-q[3]*q[1]));
-    // roll
-    ypr[2] = atan2f(2*(q[0]*q[1]-q[2]*q[3]), 1-2*(q[1]*q[1]+q[2]*q[2]));
-
-#else    
-
 /** FROM FreeIMU
  * Returns the yaw pitch and roll angles, respectively defined as the angles in radians between
  * the Earth North and the IMU X axis (yaw), the Earth ground plane and the IMU X axis (pitch)
@@ -87,8 +55,6 @@ void imuQuaternionToYawPitchRoll(float q[4], float ypr[3])
    ypr[0] = atan2f(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1);
    ypr[1] = atanf(gx / sqrt(gy*gy + gz*gz));
    ypr[2] = atanf(gy / sqrt(gx*gx + gz*gz));
-#endif
-   
 }
 
 // based on Freescale AN3461

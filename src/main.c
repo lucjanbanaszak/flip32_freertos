@@ -43,7 +43,7 @@ void tick_task(void const * argument)
 void main_task(void * pvParameters)
 {
 	gpioInit();
-	usartInit();
+	usartInit( MSP_RXCallback );
 	printf("\n\r> Zaczynamy !!!");
 	printf("\n\r> GPIO Initialised: OK");
 	printf("\n\r> USART Initialised: OK");

@@ -30,10 +30,8 @@ HAL_StatusTypeDef mspInit( UART_HandleTypeDef *huart )
 	return HAL_OK;
 };
 
-void MSP_RXCallback( uint8_t c )
+void MSP_RXCallback( uint8_t c, portBASE_TYPE* xHigherPriorityTaskWoken )
 {
-	portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
 	static mspFrame_t mspFrame = { 0, 0, { 0,0,0,0,0,0,0,0 }};
 	static uint8_t msp_rx_state = 0;
 	static uint8_t msp_rx_crc = 0;
@@ -74,7 +72,7 @@ void MSP_RXCallback( uint8_t c )
 		case 6:
 			if( msp_rx_crc == c ){
 				PIN_Clear( PIN_PWMI5 );
-				xQueueSendFromISR( xMSPFramesQueue, (void*)&mspFrame, &xHigherPriorityTaskWoken );
+				xQueueSendFromISR( xMSPFramesQueue, (void*)&mspFrame, xHigherPriorityTaskWoken );
 			}
 			msp_rx_state = 0;
 			break;
@@ -83,8 +81,7 @@ void MSP_RXCallback( uint8_t c )
 			break;
 	};
 
-	/* Switch tasks if necessary. */
-	if( xHigherPriorityTaskWoken != pdFALSE ) portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
+
 };
 
 static void serialize8(uint8_t a)

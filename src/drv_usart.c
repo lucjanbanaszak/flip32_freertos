@@ -5,17 +5,20 @@
  *      Author: lucja
  */
 #include "platform_cfg.h"
+#include "drv_usart.h"
 #include "drv_msp.h"
 #include "printf.h"
 
 UART_HandleTypeDef UartHandle;
+
+usartRXCallback_t usartRXCallback = NULL;
 
 void _putc(void *UartHandle, char c)
 {
     HAL_UART_Transmit(UartHandle, (uint8_t *)&c, 1, 0xFFFF);
 };
 
-HAL_StatusTypeDef usartInit( void )
+HAL_StatusTypeDef usartInit( usartRXCallback_t rxcallback )
 {
 	/* USART */
 	USARTx_CLK_ENABLE();
@@ -38,6 +41,10 @@ HAL_StatusTypeDef usartInit( void )
 
 	init_printf( &UartHandle, _putc );
 
+	if( rxcallback == NULL ) return HAL_ERROR;
+
+	usartRXCallback = rxcallback;
+
 	/* NVIC for USART */
 	HAL_NVIC_SetPriority(USARTx_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY+1, 0);
 	HAL_NVIC_EnableIRQ(USARTx_IRQn);
@@ -53,6 +60,8 @@ HAL_StatusTypeDef usartInit( void )
 
 void USARTx_IRQHandler(void)
 {
+	portBASE_TYPE xHigherPriorityTaskWoken;
+
 	uint32_t tmp_flag = __HAL_UART_GET_FLAG( &UartHandle, UART_FLAG_RXNE);
 	uint32_t tmp_it_source = __HAL_UART_GET_IT_SOURCE( &UartHandle, UART_IT_RXNE);
 
@@ -60,6 +69,9 @@ void USARTx_IRQHandler(void)
     if((tmp_flag != RESET) && (tmp_it_source != RESET))
     {
     	uint8_t c = UartHandle.Instance->DR;
-     	MSP_RXCallback( c );
+    	usartRXCallback( c, &xHigherPriorityTaskWoken );
     };
+
+	/* Switch tasks if necessary. */
+	if( xHigherPriorityTaskWoken != pdFALSE ) portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
 }

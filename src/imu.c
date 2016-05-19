@@ -3,6 +3,9 @@
 #include "math.h"
 #include "imu.h"
 
+#include "MahonyAHRS.h"
+#include "imu_util.h"
+
 int16_t gyroADC[3], accADC[3], accSmooth[3], magADC[3];
 
 // **************
@@ -40,41 +43,27 @@ float pitch = 0.0f;
 float roll = 0.0f;
 
 // these must be defined somewhere else
-extern float samplePeriod = 0.01f;
-extern float quaternion[4] = {1.0f, 0.0f, 0.0f, 0.0f };;
+float samplePeriod = 0.01f;
+float quaternion[4] = {1.0f, 0.0f, 0.0f, 0.0f };;
 
 void computeIMU(void)
 {
     Gyro_getADC();
     ACC_getADC();
-//    getEstimatedAttitude();
 
-    static float accSmooth[3] = {0.0f, 0.0f, 0.0f};
-    float accMag = 0.0f;
+    float gyro[3], acc[3];
 
     for( uint32_t axis = 0; axis < 3; axis++ ){
-    	accSmooth[axis] += (float)accADC[axis]/acc_lpf_factor - accSmooth[axis]/acc_lpf_factor;
-        accMag += accSmooth[axis] * accSmooth[axis];
+    	gyro[axis] = 2000.0f*(float)gyroADC[axis]*0.0000305f*0.01f;
+    	acc[axis]  = 8.0f*(float)accADC[axis]*0.0000305f;
     };
 
-    pitchACC = -atan2f((float)accSmooth[0], (float)accSmooth[2]) * 180/M_PI;
-    rollACC = atan2f((float)accSmooth[1], (float)accSmooth[2]) * 180/M_PI;
+    imuDegToRadV3(gyro);
 
-    pitchGYR = (float)gyroADC[1]*2000.0f*0.0000305f*0.01f; // zakres gyro * 2/65536 * T
-    rollGYR = (float)gyroADC[0]*2000.0f*0.0000305f*0.01f;
+    MahonyAHRSupdateIMU( gyro[0], gyro[1], gyro[2], acc[0], acc[1], acc[2] );
 
-    pitch = filterG*(pitch + pitchGYR) + (1.0f-filterG)*pitchACC;
-    roll = filterG*(roll + rollGYR) + (1.0f-filterG)*rollACC;
-
-
-    angleG[0] = pitch;
-    angleG[1] = roll;
-    angleG[2] = accMag/65536.0f/3.0f;
-    angleG[3] = 0.0f;//0.98f*(angleG[3] + rollGYR) + 0.02f*rollACC;
-
-    gyroData[YAW] = gyroADC[YAW];
-    gyroData[ROLL] = gyroADC[ROLL];
-    gyroData[PITCH] = gyroADC[PITCH];
+    imuQuaternionToYawPitchRoll( quaternion, angleG );
+    imuRadToDegV3(angleG);
 }
 
 typedef struct fp_vector {
@@ -140,7 +129,7 @@ void rotateV(struct fp_vector *v, float *delta)
     v->Z = v_tmp.X * mat[0][2] + v_tmp.Y * mat[1][2] + v_tmp.Z * mat[2][2];
 }
 
-static void getEstimatedAttitude(void)
+void getEstimatedAttitude(void)
 {
     static float accLPF[3];
     float scale, deltaGyroAngle[3];
